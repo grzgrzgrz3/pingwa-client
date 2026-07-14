@@ -1,0 +1,52 @@
+[project]
+name = "pingwa"
+version = "0.2.0"
+description = "WhatsApp notifications + human-in-the-loop for AI agents and scripts — curl to WhatsApp in 60s, no app, no dashboard."
+readme = "README.md"
+authors = [
+    { name = "grzgrzgrz3", email = "grzgrzgrz3@gmail.com" }
+]
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["whatsapp", "notifications", "mcp", "agent", "cli", "llm", "ai", "human-in-the-loop"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Chat",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "httpx>=0.28.1",
+    "mcp>=1.2.0",
+]
+
+[project.urls]
+Homepage = "https://pingwa.dev"
+Documentation = "https://pingwa.dev/llms.txt"
+Source = "https://github.com/grzgrzgrz3/pingwa-client"
+
+[project.scripts]
+pingwa = "pingwa.client.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.28,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pingwa"
+module-root = "src"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "respx>=0.23.1",
+    "ruff>=0.15.21",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
