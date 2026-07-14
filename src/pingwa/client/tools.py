@@ -67,8 +67,41 @@ def _fmt_replies(res: dict) -> str:
     return f"{len(msgs)} reply(ies):\n" + "\n".join(lines) + f"\n(cursor={cursor})"
 
 
+def _fmt_keys(res: dict) -> str:
+    keys = res.get("keys") or []
+    if not keys:
+        return "No active API keys. Send 'join' on WhatsApp to mint one."
+    lines = [f"- {k.get('name')}  (created {(k.get('created_at') or '')[:10]}, "
+             + (f"last used {(k['last_used_at'] or '')[:10]}" if k.get("last_used_at") else "never used")
+             + ")"
+             for k in keys]
+    return f"{len(keys)} active key(s):\n" + "\n".join(lines)
+
+
+def _key_id_by_name(res: dict, name: str) -> str:
+    for k in res.get("keys") or []:
+        if (k.get("name") or "").lower() == name.lower():
+            return k["id"]
+    names = ", ".join(k.get("name", "?") for k in res.get("keys") or []) or "(none)"
+    raise PingwaError(
+        f"No active key named '{name}'.",
+        code="key_not_found",
+        action=f"Active keys: {names}. Run 'pingwa keys' to list them.",
+    )
+
+
 def notify_tool(client, text: str, image_url: str | None = None) -> str:
     return _fmt_notify(client.notify(_validate_text(text), image_url))
+
+
+def keys_tool(client) -> str:
+    return _fmt_keys(client.list_keys())
+
+
+def revoke_key_tool(client, name: str) -> str:
+    key_id = _key_id_by_name(client.list_keys(), name)
+    res = client.revoke_key(key_id)
+    return f"Key '{res.get('revoked', name)}' revoked."
 
 
 def status_tool(client) -> str:

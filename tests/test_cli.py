@@ -133,3 +133,38 @@ def test_replies_prints_messages(monkeypatch, capsys):
 def test_no_command_prints_help_exit_1(capsys):
     assert main([]) == EXIT_ERR
     assert "usage" in capsys.readouterr().err.lower()
+
+
+_KEYS_JSON = {"keys": [
+    {"id": "k1", "name": "laptop", "created_at": "2026-07-14T10:00:00+00:00",
+     "last_used_at": "2026-07-14T12:00:00+00:00"},
+    {"id": "k2", "name": "ci", "created_at": "2026-07-13T10:00:00+00:00",
+     "last_used_at": None},
+]}
+
+
+@respx.mock
+def test_keys_lists_names(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.get(f"{BASE}/v1/keys").respond(200, json=_KEYS_JSON)
+    assert main(["keys"]) == EXIT_OK
+    out = capsys.readouterr().out
+    assert "laptop" in out and "ci" in out
+
+
+@respx.mock
+def test_keys_revoke_by_name(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.get(f"{BASE}/v1/keys").respond(200, json=_KEYS_JSON)
+    route = respx.delete(f"{BASE}/v1/keys/k2").respond(200, json={"revoked": "ci"})
+    assert main(["keys", "revoke", "ci"]) == EXIT_OK
+    assert route.called
+    assert "ci" in capsys.readouterr().out
+
+
+@respx.mock
+def test_keys_revoke_unknown_name_exit_1(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.get(f"{BASE}/v1/keys").respond(200, json=_KEYS_JSON)
+    assert main(["keys", "revoke", "nope"]) == EXIT_ERR
+    assert "nope" in capsys.readouterr().err

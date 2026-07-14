@@ -59,6 +59,11 @@ def _build_parser() -> argparse.ArgumentParser:
     u = sub.add_parser("upgrade", help="get a Stripe link to upgrade to Pro (or manage an existing Pro sub)")
     u.add_argument("--json", action="store_true", help="print the raw JSON response")
 
+    k = sub.add_parser("keys", help="list active API keys, or revoke one by name")
+    k.add_argument("action", nargs="?", choices=["list", "revoke"], default="list")
+    k.add_argument("name", nargs="?", help="key name (required for revoke)")
+    k.add_argument("--json", action="store_true", help="print the raw JSON response")
+
     sub.add_parser("mcp", help="run the pingwa MCP server over stdio (Claude Desktop/Code)")
     return p
 
@@ -124,6 +129,22 @@ def _cmd_upgrade(args) -> int:
     return EXIT_OK
 
 
+def _cmd_keys(args) -> int:
+    client = _client(args)
+    if args.action == "revoke":
+        if not args.name:
+            print("error: 'pingwa keys revoke' needs a key name (run 'pingwa keys' to list)",
+                  file=sys.stderr)
+            return EXIT_ERR
+        print(tools.revoke_key_tool(client, args.name))
+        return EXIT_OK
+    if args.json:
+        print(jsonlib.dumps(client.list_keys()))
+    else:
+        print(tools.keys_tool(client))
+    return EXIT_OK
+
+
 def _cmd_mcp(args) -> int:
     from pingwa.client.mcp_stdio import main as mcp_main
     mcp_main()
@@ -137,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help(sys.stderr)
         return EXIT_ERR
     handlers = {"send": _cmd_send, "ask": _cmd_ask, "replies": _cmd_replies,
-                "me": _cmd_me, "upgrade": _cmd_upgrade, "mcp": _cmd_mcp}
+                "me": _cmd_me, "upgrade": _cmd_upgrade, "keys": _cmd_keys, "mcp": _cmd_mcp}
     try:
         return handlers[args.command](args)
     except MissingKeyError as exc:

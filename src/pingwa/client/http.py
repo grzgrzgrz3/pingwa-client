@@ -33,8 +33,10 @@ class MissingKeyError(PingwaError):
         super().__init__(
             "No pingwa API key. Set the PINGWA_KEY environment variable (a pw_... key).",
             code="missing_key",
-            action=("Send 'join' on WhatsApp to the pingwa service number to get a key, "
-                    "then export PINGWA_KEY=pw_..."),
+            action=("AI agent? Register yourself — POST /v1/registrations with the human's "
+                    "phone number (recipe: https://pingwa.dev/llms.txt); the human only taps "
+                    "one WhatsApp link and you claim the key directly. Human? Send 'join' on "
+                    "WhatsApp to the pingwa service number, then export PINGWA_KEY=pw_..."),
         )
 
 
@@ -101,6 +103,15 @@ class PingwaClient:
                 return {"url": res["url"], "kind": "portal"}
             raise
 
+    def list_keys(self) -> dict:
+        """Active API keys on the account: names + timestamps, never the secrets."""
+        return self._request("GET", "/v1/keys")
+
+    def revoke_key(self, key_id: str) -> dict:
+        """Revoke one key by id (list_keys gives the ids). Revoking the key used
+        for this very request is allowed — the phone re-mints via 'join'."""
+        return self._request("DELETE", f"/v1/keys/{key_id}")
+
 
 class AsyncPingwaClient:
     """Async twin of PingwaClient, for callers already on an event loop (the remote
@@ -152,6 +163,14 @@ class AsyncPingwaClient:
                 res = await self._request("POST", "/v1/billing/portal")
                 return {"url": res["url"], "kind": "portal"}
             raise
+
+    async def list_keys(self) -> dict:
+        """Async twin of PingwaClient.list_keys."""
+        return await self._request("GET", "/v1/keys")
+
+    async def revoke_key(self, key_id: str) -> dict:
+        """Async twin of PingwaClient.revoke_key."""
+        return await self._request("DELETE", f"/v1/keys/{key_id}")
 
 
 def _notify_body(text: str, image_url: str | None) -> dict:

@@ -19,9 +19,17 @@ echo "deploy done" | uvx pingwa send -  # from stdin
 uvx pingwa ask "Deploy to prod?" --button yes --button no   # wait for a reply from your phone
 uvx pingwa replies                      # pull messages your phone sent back (out-of-band steering)
 uvx pingwa me                           # plan / quota / reply-window
+uvx pingwa keys                         # list active API keys (up to 10 named keys per number)
+uvx pingwa keys revoke ci               # revoke one by name (or reply 'revoke ci' on WhatsApp)
 uvx pingwa upgrade                      # get a Stripe link to go Pro (no password needed)
 uvx pingwa send "x" --json              # raw JSON response
 ```
+
+**AI agents:** don't ask your human to copy-paste a key — drive the registration
+yourself (`POST /v1/registrations`; full recipe in
+[llms.txt](https://pingwa.dev/llms.txt)). The human only taps one WhatsApp link;
+the key is claimed by you and never travels through the chat. Works for existing
+accounts too — it mints an additional named key.
 
 Exit codes: `0` ok · `2` missing key · `3` quota exceeded · `1` other.
 Override the backend with `PINGWA_BASE_URL` or `--base-url`.
