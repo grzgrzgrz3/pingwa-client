@@ -133,6 +133,55 @@ def test_network_error_wrapped():
     assert ei.value.code == "network_error"
 
 
+@respx.mock
+def test_create_webhook_posts_url_returns_secret():
+    route = respx.post(f"{BASE}/v1/webhooks").respond(201, json={
+        "id": "wh1", "url": "https://ex.com/hook", "secret": "whsec_abc",
+        "active": True, "created_at": "2026-07-15T00:00:00+00:00"})
+    out = _client().create_webhook("https://ex.com/hook")
+    assert out["secret"] == "whsec_abc" and out["id"] == "wh1"
+    import json as _json
+    assert _json.loads(route.calls.last.request.content) == {"url": "https://ex.com/hook"}
+
+
+@respx.mock
+def test_create_webhook_409_limit_surfaces_action():
+    respx.post(f"{BASE}/v1/webhooks").respond(409, json={"detail": {
+        "error": "webhook_limit_reached", "message": "5 active max",
+        "action": "DELETE /v1/webhooks/{id} to free a slot, then create again."}})
+    with pytest.raises(PingwaError) as ei:
+        _client().create_webhook("https://ex.com/hook")
+    assert ei.value.code == "webhook_limit_reached" and ei.value.status == 409
+    assert "free a slot" in ei.value.action
+
+
+@respx.mock
+def test_list_webhooks_returns_rows():
+    respx.get(f"{BASE}/v1/webhooks").respond(200, json={"webhooks": [
+        {"id": "wh1", "url": "https://ex.com/h", "active": True,
+         "created_at": "2026-07-15T00:00:00+00:00", "last_delivery_at": None,
+         "failure_count": 0}]})
+    out = _client().list_webhooks()
+    assert out["webhooks"][0]["id"] == "wh1"
+
+
+@respx.mock
+def test_delete_webhook_hits_id_path():
+    route = respx.delete(f"{BASE}/v1/webhooks/wh1").respond(200, json={"deleted": True})
+    assert _client().delete_webhook("wh1")["deleted"] is True
+    assert route.called
+
+
+@respx.mock
+def test_delete_webhook_404_raises():
+    respx.delete(f"{BASE}/v1/webhooks/nope").respond(404, json={"detail": {
+        "error": "webhook_not_found", "message": "no such webhook",
+        "action": "GET /v1/webhooks to list your webhooks and their ids."}})
+    with pytest.raises(PingwaError) as ei:
+        _client().delete_webhook("nope")
+    assert ei.value.code == "webhook_not_found" and ei.value.status == 404
+
+
 def test_from_env_missing_key_raises(monkeypatch):
     monkeypatch.delenv("PINGWA_KEY", raising=False)
     with pytest.raises(MissingKeyError):

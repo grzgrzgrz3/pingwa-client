@@ -90,6 +90,57 @@ def _key_id_by_name(res: dict, name: str) -> str:
     )
 
 
+def _fmt_webhooks(res: dict) -> str:
+    hooks = res.get("webhooks") or []
+    if not hooks:
+        return "No webhooks. Add one: pingwa webhooks add https://your-host/hook"
+    lines = []
+    for w in hooks:
+        state = "active" if w.get("active") else "inactive"
+        fails = w.get("failure_count") or 0
+        last = (w.get("last_delivery_at") or "")[:10] or "never"
+        lines.append(
+            f"- {w.get('id')}  {w.get('url')}  ({state}, last delivery {last}"
+            + (f", {fails} failure(s)" if fails else "")
+            + ")"
+        )
+    return f"{len(hooks)} webhook(s):\n" + "\n".join(lines)
+
+
+def _fmt_webhook_created(res: dict) -> str:
+    return (f"Webhook created ✓ (id={res.get('id')}, url={res.get('url')}).\n"
+            f"Signing secret (shown ONCE — store it now, it signs every delivery):\n"
+            f"  {res.get('secret')}\n"
+            "Verify the X-Pingwa-Signature header with it — recipe: "
+            "https://pingwa.dev/llms.txt")
+
+
+def _webhook_id_by_arg(res: dict, arg: str) -> str:
+    """Resolve a `pingwa webhooks rm` argument to a webhook id. An exact id match
+    wins; otherwise try to match a listed webhook's exact url. Two subscriptions
+    sharing one url is ambiguous → error listing the candidate ids."""
+    hooks = res.get("webhooks") or []
+    for w in hooks:
+        if w.get("id") == arg:
+            return arg
+    by_url = [w for w in hooks if w.get("url") == arg]
+    if len(by_url) == 1:
+        return by_url[0]["id"]
+    if len(by_url) > 1:
+        ids = ", ".join(w.get("id", "?") for w in by_url)
+        raise PingwaError(
+            f"Multiple webhooks share the url '{arg}'.",
+            code="ambiguous_webhook",
+            action=f"Delete by id instead — candidates: {ids} (run 'pingwa webhooks').",
+        )
+    ids = ", ".join(w.get("id", "?") for w in hooks) or "(none)"
+    raise PingwaError(
+        f"No webhook with id or url '{arg}'.",
+        code="webhook_not_found",
+        action=f"Known ids: {ids}. Run 'pingwa webhooks' to list them.",
+    )
+
+
 def notify_tool(client, text: str, image_url: str | None = None) -> str:
     return _fmt_notify(client.notify(_validate_text(text), image_url))
 
@@ -102,6 +153,20 @@ def revoke_key_tool(client, name: str) -> str:
     key_id = _key_id_by_name(client.list_keys(), name)
     res = client.revoke_key(key_id)
     return f"Key '{res.get('revoked', name)}' revoked."
+
+
+def webhooks_tool(client) -> str:
+    return _fmt_webhooks(client.list_webhooks())
+
+
+def add_webhook_tool(client, url: str) -> str:
+    return _fmt_webhook_created(client.create_webhook(url))
+
+
+def rm_webhook_tool(client, arg: str) -> str:
+    webhook_id = _webhook_id_by_arg(client.list_webhooks(), arg)
+    client.delete_webhook(webhook_id)
+    return f"Webhook {webhook_id} deleted."
 
 
 def status_tool(client) -> str:

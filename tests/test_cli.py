@@ -168,3 +168,118 @@ def test_keys_revoke_unknown_name_exit_1(monkeypatch, capsys):
     respx.get(f"{BASE}/v1/keys").respond(200, json=_KEYS_JSON)
     assert main(["keys", "revoke", "nope"]) == EXIT_ERR
     assert "nope" in capsys.readouterr().err
+
+
+_WEBHOOKS_JSON = {"webhooks": [
+    {"id": "wh1", "url": "https://a.example/hook", "active": True,
+     "created_at": "2026-07-15T10:00:00+00:00", "last_delivery_at": None,
+     "failure_count": 0},
+    {"id": "wh2", "url": "https://b.example/hook", "active": False,
+     "created_at": "2026-07-14T10:00:00+00:00",
+     "last_delivery_at": "2026-07-14T12:00:00+00:00", "failure_count": 3},
+]}
+
+
+@respx.mock
+def test_webhooks_lists(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.get(f"{BASE}/v1/webhooks").respond(200, json=_WEBHOOKS_JSON)
+    assert main(["webhooks"]) == EXIT_OK
+    out = capsys.readouterr().out
+    assert "wh1" in out and "a.example" in out and "inactive" in out
+
+
+@respx.mock
+def test_webhooks_json_flag(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.get(f"{BASE}/v1/webhooks").respond(200, json=_WEBHOOKS_JSON)
+    assert main(["webhooks", "--json"]) == EXIT_OK
+    assert json.loads(capsys.readouterr().out)["webhooks"][0]["id"] == "wh1"
+
+
+@respx.mock
+def test_webhooks_add_shows_secret_once(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.post(f"{BASE}/v1/webhooks").respond(201, json={
+        "id": "wh9", "url": "https://c.example/hook", "secret": "whsec_TOPSECRET",
+        "active": True, "created_at": "2026-07-15T00:00:00+00:00"})
+    assert main(["webhooks", "add", "https://c.example/hook"]) == EXIT_OK
+    out = capsys.readouterr().out
+    assert "whsec_TOPSECRET" in out
+    assert "once" in out.lower()
+
+
+@respx.mock
+def test_webhooks_add_json_flag(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.post(f"{BASE}/v1/webhooks").respond(201, json={
+        "id": "wh9", "url": "https://c.example/hook", "secret": "whsec_X",
+        "active": True, "created_at": "2026-07-15T00:00:00+00:00"})
+    assert main(["webhooks", "add", "--json", "https://c.example/hook"]) == EXIT_OK
+    assert json.loads(capsys.readouterr().out)["secret"] == "whsec_X"
+
+
+@respx.mock
+def test_webhooks_add_409_cap_surfaces_message_and_action(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.post(f"{BASE}/v1/webhooks").respond(409, json={"detail": {
+        "error": "webhook_limit_reached",
+        "message": "This account already has 5 active webhook(s), the per-account maximum.",
+        "action": "DELETE /v1/webhooks/{id} to free a slot, then create again."}})
+    assert main(["webhooks", "add", "https://c.example/hook"]) == EXIT_ERR
+    err = capsys.readouterr().err
+    assert "per-account maximum" in err and "free a slot" in err
+
+
+@respx.mock
+def test_webhooks_rm_by_id(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.get(f"{BASE}/v1/webhooks").respond(200, json=_WEBHOOKS_JSON)
+    route = respx.delete(f"{BASE}/v1/webhooks/wh1").respond(200, json={"deleted": True})
+    assert main(["webhooks", "rm", "wh1"]) == EXIT_OK
+    assert route.called
+    assert "wh1" in capsys.readouterr().out
+
+
+@respx.mock
+def test_webhooks_rm_by_url_resolves_id(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.get(f"{BASE}/v1/webhooks").respond(200, json=_WEBHOOKS_JSON)
+    route = respx.delete(f"{BASE}/v1/webhooks/wh2").respond(200, json={"deleted": True})
+    assert main(["webhooks", "rm", "https://b.example/hook"]) == EXIT_OK
+    assert route.called
+
+
+@respx.mock
+def test_webhooks_rm_unknown_exit_1(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.get(f"{BASE}/v1/webhooks").respond(200, json=_WEBHOOKS_JSON)
+    assert main(["webhooks", "rm", "https://nope.example/x"]) == EXIT_ERR
+    assert "nope.example" in capsys.readouterr().err
+
+
+@respx.mock
+def test_webhooks_rm_ambiguous_url_exit_1_lists_candidates(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.get(f"{BASE}/v1/webhooks").respond(200, json={"webhooks": [
+        {"id": "wh1", "url": "https://dup.example/hook", "active": True,
+         "created_at": "2026-07-15T10:00:00+00:00", "last_delivery_at": None,
+         "failure_count": 0},
+        {"id": "wh2", "url": "https://dup.example/hook", "active": True,
+         "created_at": "2026-07-14T10:00:00+00:00", "last_delivery_at": None,
+         "failure_count": 0},
+    ]})
+    assert main(["webhooks", "rm", "https://dup.example/hook"]) == EXIT_ERR
+    err = capsys.readouterr().err
+    assert "wh1" in err and "wh2" in err
+    assert "multiple" in err.lower()
+
+
+@respx.mock
+def test_webhooks_rm_404_from_server_exit_1(monkeypatch, capsys):
+    _env(monkeypatch)
+    respx.get(f"{BASE}/v1/webhooks").respond(200, json=_WEBHOOKS_JSON)
+    respx.delete(f"{BASE}/v1/webhooks/wh1").respond(404, json={"detail": {
+        "error": "webhook_not_found", "message": "gone",
+        "action": "GET /v1/webhooks to list."}})
+    assert main(["webhooks", "rm", "wh1"]) == EXIT_ERR

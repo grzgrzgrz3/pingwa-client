@@ -112,6 +112,21 @@ class PingwaClient:
         for this very request is allowed — the phone re-mints via 'join'."""
         return self._request("DELETE", f"/v1/keys/{key_id}")
 
+    def create_webhook(self, url: str) -> dict:
+        """Register an HTTPS endpoint pingwa PUSHes inbound messages to. Returns
+        {id, url, secret, active, created_at}; the `secret` (whsec_...) signs every
+        delivery and is returned ONCE here — never again. Max 5 active per account."""
+        return self._request("POST", "/v1/webhooks", {"url": url})
+
+    def list_webhooks(self) -> dict:
+        """The account's webhook subscriptions: {webhooks:[{id,url,active,created_at,
+        last_delivery_at,failure_count}]}. The signing secret is never returned here."""
+        return self._request("GET", "/v1/webhooks")
+
+    def delete_webhook(self, webhook_id: str) -> dict:
+        """Delete one webhook by id (list_webhooks gives the ids)."""
+        return self._request("DELETE", f"/v1/webhooks/{webhook_id}")
+
 
 class AsyncPingwaClient:
     """Async twin of PingwaClient, for callers already on an event loop (the remote
@@ -171,6 +186,18 @@ class AsyncPingwaClient:
     async def revoke_key(self, key_id: str) -> dict:
         """Async twin of PingwaClient.revoke_key."""
         return await self._request("DELETE", f"/v1/keys/{key_id}")
+
+    async def create_webhook(self, url: str) -> dict:
+        """Async twin of PingwaClient.create_webhook."""
+        return await self._request("POST", "/v1/webhooks", {"url": url})
+
+    async def list_webhooks(self) -> dict:
+        """Async twin of PingwaClient.list_webhooks."""
+        return await self._request("GET", "/v1/webhooks")
+
+    async def delete_webhook(self, webhook_id: str) -> dict:
+        """Async twin of PingwaClient.delete_webhook."""
+        return await self._request("DELETE", f"/v1/webhooks/{webhook_id}")
 
 
 def _notify_body(text: str, image_url: str | None) -> dict:

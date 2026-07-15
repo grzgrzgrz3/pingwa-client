@@ -38,6 +38,24 @@ accounts too — it mints an additional named key.
 Exit codes: `0` ok · `2` missing key · `3` quota exceeded · `1` other.
 Override the backend with `PINGWA_BASE_URL` or `--base-url`.
 
+## Webhooks
+
+Prefer PUSH over polling `replies`? Register HTTPS endpoints and pingwa POSTs
+every inbound WhatsApp message to them:
+
+```bash
+uvx pingwa webhooks                                   # list your webhooks
+uvx pingwa webhooks add https://your-host/pingwa-hook # returns a signing SECRET, shown ONCE
+uvx pingwa webhooks rm https://your-host/pingwa-hook  # by id, or by exact url
+```
+
+`add` prints a `whsec_...` secret **once** — store it now; it never appears
+again. Each delivery carries an `X-Pingwa-Signature: sha256=<hex>` header (an
+HMAC-SHA256 of the raw body under that secret) — verify it and reject anything
+that fails. Full verification recipe and payload shape:
+[llms.txt](https://pingwa.dev/llms.txt). Up to 5 active webhooks per account; to
+rotate a secret, `rm` then `add` again.
+
 ## MCP server
 
 Same tools on stdio and remote: `notify(text)`, `ask(text, buttons?, timeout?)`,
