@@ -184,8 +184,27 @@ def _cmd_mcp(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw = list(sys.argv[1:] if argv is None else argv)
+    # argparse before 3.12.8 fails to match a trailing optional positional when a
+    # flag is interleaved between two nargs="?" positionals (e.g.
+    # `webhooks add --json <url>`). --json is a version-independent boolean output
+    # toggle, so lift it out of argv before parsing and reapply it after; honour
+    # the `--` end-of-options marker so a literal "--json" argument survives.
+    cleaned: list[str] = []
+    want_json = False
+    end_of_opts = False
+    for tok in raw:
+        if not end_of_opts and tok == "--":
+            end_of_opts = True
+            cleaned.append(tok)
+        elif not end_of_opts and tok == "--json":
+            want_json = True
+        else:
+            cleaned.append(tok)
     parser = _build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(cleaned)
+    if want_json:
+        args.json = True
     if not args.command:
         parser.print_help(sys.stderr)
         return EXIT_ERR
