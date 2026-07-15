@@ -1,5 +1,9 @@
 # pingwa (client)
 
+[![PyPI](https://img.shields.io/pypi/v/pingwa.svg)](https://pypi.org/project/pingwa/)
+[![Python](https://img.shields.io/pypi/pyversions/pingwa.svg)](https://pypi.org/project/pingwa/)
+[![License: MIT](https://img.shields.io/pypi/l/pingwa.svg)](https://github.com/grzgrzgrz3/pingwa-client/blob/main/LICENSE)
+
 WhatsApp notifications + human-in-the-loop for AI agents and scripts — from your
 terminal or an MCP client. `curl → WhatsApp in 60s`, no app, no dashboard.
 
