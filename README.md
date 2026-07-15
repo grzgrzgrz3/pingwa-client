@@ -5,7 +5,7 @@ terminal or an MCP client. `curl → WhatsApp in 60s`, no app, no dashboard.
 
 This is the **open-source (MIT) pingwa client**: a CLI, a tiny HTTP client, and an
 MCP server. It talks to a pingwa backend (the hosted service at
-`https://pingwa.dev`, or your own). The backend is separate and private;
+https://pingwa.dev, or your own). The backend is separate and private;
 this client is not.
 
 ## Install & use
@@ -42,15 +42,28 @@ Same tools on stdio and remote: `notify(text)`, `ask(text, buttons?, timeout?)`,
 Local (stdio) — for Claude Desktop / Claude Code:
 
 ```json
-{"mcpServers":{"pingwa":{"command":"uvx","args":["pingwa","mcp"],
- "env":{"PINGWA_KEY":"pw_your_key"}}}}
+{
+  "mcpServers": {
+    "pingwa": {
+      "command": "uvx",
+      "args": ["pingwa", "mcp"],
+      "env": { "PINGWA_KEY": "pw_your_key" }
+    }
+  }
+}
 ```
 
 Remote (Streamable HTTP, no install):
 
 ```json
-{"mcpServers":{"pingwa":{"url":"https://pingwa.dev/mcp",
- "headers":{"Authorization":"Bearer pw_your_key"}}}}
+{
+  "mcpServers": {
+    "pingwa": {
+      "url": "https://pingwa.dev/mcp",
+      "headers": { "Authorization": "Bearer pw_your_key" }
+    }
+  }
+}
 ```
 
 Every error carries an `action` hint, so an agent knows what to do next.
@@ -60,13 +73,6 @@ Every error carries an `action` hint, so an agent knows what to do next.
 Only your message text and your key, to the pingwa backend you point it at — over
 HTTPS. Nothing else. The recipient is always your own phone (there is no "to"
 field). See the service's [/privacy](https://pingwa.dev/privacy).
-
-## Repository
-
-The client is developed in a private monorepo next to the (proprietary) backend;
-[grzgrzgrz3/pingwa-client](https://github.com/grzgrzgrz3/pingwa-client) is its
-public read-only mirror — the full source of every published `pingwa` release,
-synced on release. Issues and PRs are welcome there.
 
 ## License
 
