@@ -1,0 +1,59 @@
+name: Publish Python Package
+
+# Publishes the pingwa client to PyPI when a GitHub Release is published.
+# Uses PyPI Trusted Publishing (OIDC) — no API token stored in the repo.
+# Release flow: bump version in the monorepo -> sync-client-mirror.sh -> push
+# this mirror -> create a GitHub Release tagged vX.Y.Z here.
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Run client tests
+        run: uv run pytest -q
+
+      - name: Build sdist + wheel
+        run: uv build
+
+      - name: Verify package version matches the release tag
+        run: |
+          PKG_VERSION="$(sed -nE 's/^version = "(.*)"/\1/p' pyproject.toml | head -n1)"
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG" ]; then
+            echo "version mismatch: pyproject=$PKG_VERSION tag=$TAG" >&2
+            exit 1
+          fi
+          echo "version $PKG_VERSION == tag $TAG"
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
