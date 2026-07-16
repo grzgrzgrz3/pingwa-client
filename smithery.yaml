@@ -1,0 +1,13 @@
+# Smithery.ai manifest — how to launch the pingwa MCP server (stdio).
+# Reference: https://smithery.ai/docs/build/project-config/smithery.yaml
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required: [pingwaKey]
+    properties:
+      pingwaKey:
+        type: string
+        description: pingwa API key (send "join" on WhatsApp to the service number — https://pingwa.dev)
+  commandFunction: |-
+    (config) => ({ command: "uvx", args: ["pingwa", "mcp"], env: { PINGWA_KEY: config.pingwaKey } })
