@@ -4,8 +4,12 @@
 [![Python](https://img.shields.io/pypi/pyversions/pingwa.svg)](https://pypi.org/project/pingwa/)
 [![License: MIT](https://img.shields.io/pypi/l/pingwa.svg)](https://github.com/grzgrzgrz3/pingwa-client/blob/main/LICENSE)
 
-WhatsApp notifications + human-in-the-loop for AI agents and scripts — from your
-terminal or an MCP client. `curl → WhatsApp in 60s`, no app, no dashboard.
+WhatsApp notifications for AI agents and scripts with **zero setup** — no Meta
+account, no templates, no dashboard: text "join", get an API key,
+`curl → WhatsApp in 60s`. Two-way human-in-the-loop: your agent asks, you tap
+a button to answer. From your terminal or an MCP client.
+
+<!-- mcp-name: io.github.grzgrzgrz3/pingwa -->
 
 This is the **open-source (MIT) pingwa client**: a CLI, a tiny HTTP client, and an
 MCP server. It talks to a pingwa backend (the hosted service at

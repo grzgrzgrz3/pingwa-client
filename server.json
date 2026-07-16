@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.grzgrzgrz3/pingwa",
+  "title": "pingwa",
+  "description": "WhatsApp notifications for AI agents with zero setup — no Meta account, no templates: text 'join', get an API key, send in 60 seconds. Two-way human-in-the-loop: ask with tap-to-answer buttons, check_replies. Official Meta Cloud API — won't ban your number.",
+  "version": "0.4.1",
+  "websiteUrl": "https://pingwa.dev",
+  "repository": {
+    "url": "https://github.com/grzgrzgrz3/pingwa-client",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "pingwa",
+      "version": "0.4.1",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "PINGWA_KEY",
+          "description": "pingwa API key (send 'join' on WhatsApp to the service number — see https://pingwa.dev)",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://pingwa.dev/mcp"
+    }
+  ]
+}
