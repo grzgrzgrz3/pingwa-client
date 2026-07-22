@@ -2,12 +2,6 @@ MIT License
 
 Copyright (c) 2026 pingwa contributors
 
-Scope: this license covers the pingwa CLIENT only — the source under
-`src/pingwa/client/` (the `pingwa` package published to PyPI: the CLI, the HTTP
-client, and the stdio MCP server). The pingwa server (API, worker, billing,
-webhooks, registrations and related modules) is NOT covered by this license and
-is not published; all rights to it are reserved by the operator.
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights

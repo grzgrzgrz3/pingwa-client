@@ -1,6 +1,6 @@
 [project]
 name = "pingwa"
-version = "0.4.1"
+version = "0.4.2"
 description = "WhatsApp notifications + human-in-the-loop for AI agents and scripts — curl to WhatsApp in 60s, no app, no dashboard."
 readme = "README.md"
 authors = [

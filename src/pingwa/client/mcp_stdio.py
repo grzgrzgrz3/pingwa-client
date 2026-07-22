@@ -5,7 +5,10 @@ environment.
 Tool contract (frozen — tools are added, never renamed/changed):
 notify, check_status, upgrade, ask, check_replies.
 """
+from typing import Annotated
+
 from mcp.server.fastmcp import FastMCP
+from pydantic import Field
 
 from pingwa.client import tools
 from pingwa.client.http import PingwaClient
@@ -32,7 +35,19 @@ def register_tools(mcp: FastMCP, get_client) -> FastMCP:
     is defined exactly once."""
 
     @mcp.tool()
-    def notify(text: str, image_url: str | None = None) -> str:
+    def notify(
+        text: Annotated[
+            str,
+            Field(description="The message to send (1-1024 characters). Goes to the "
+                  "key owner's own phone; there is no recipient field."),
+        ],
+        image_url: Annotated[
+            str | None,
+            Field(description="Optional public https image link (screenshot, chart, "
+                  "diff). Delivered as an image with `text` as the caption when the "
+                  "24h reply window is open; text-only otherwise."),
+        ] = None,
+    ) -> str:
         """Send a WhatsApp notification to the account owner's own phone.
 
         `text` is the message (1-1024 chars). `image_url` (optional) is a public https
@@ -59,7 +74,24 @@ def register_tools(mcp: FastMCP, get_client) -> FastMCP:
         return tools.upgrade_tool(get_client())
 
     @mcp.tool()
-    def ask(text: str, buttons: list[str] | None = None, timeout: int = 60) -> str:
+    def ask(
+        text: Annotated[
+            str,
+            Field(description="The question to ask the human on WhatsApp."),
+        ],
+        buttons: Annotated[
+            list[str] | None,
+            Field(description="Optional list of up to 3 tappable reply buttons. Omit "
+                  "to invite a free-text answer the human types on their phone (use "
+                  "this to let them steer you mid-task)."),
+        ] = None,
+        timeout: Annotated[
+            int,
+            Field(description="Seconds to block waiting for the reply (max 90). On "
+                  "timeout the question was still delivered; the answer stays "
+                  "retrievable via `check_replies`."),
+        ] = 60,
+    ) -> str:
         """Ask the human a question on WhatsApp and BLOCK until they reply (or timeout).
 
         `text` is the question. `buttons` (optional, up to 3) render as tappable reply
@@ -72,7 +104,18 @@ def register_tools(mcp: FastMCP, get_client) -> FastMCP:
         return tools.ask_tool(get_client(), text, buttons, timeout)
 
     @mcp.tool(name="check_replies")
-    def check_replies(since: str | None = None, wait: int = 0) -> str:
+    def check_replies(
+        since: Annotated[
+            str | None,
+            Field(description="Cursor from a previous call; pass it back to get only "
+                  "messages newer than that point. Omit on the first call."),
+        ] = None,
+        wait: Annotated[
+            int,
+            Field(description="Seconds to long-poll for a message to arrive before "
+                  "returning (0 = return immediately with whatever is buffered)."),
+        ] = 0,
+    ) -> str:
         """Pull inbound WhatsApp messages the human sent to pingwa (out-of-band
         instructions, or late answers to an `ask`). `since` is a cursor from a previous
         call (pass it back to get only newer messages); `wait` long-polls up to that many

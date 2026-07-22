@@ -1,0 +1,10 @@
+pingwa — license scope
+=======================
+
+The MIT License in this repository covers the pingwa CLIENT only: the source
+under `src/pingwa/client/` — the `pingwa` package published to PyPI (the CLI,
+the HTTP client, and the stdio MCP server).
+
+The pingwa server (API, worker, billing, webhooks, registrations and related
+modules) is NOT covered by the MIT License and is not published. All rights to
+the server are reserved by the operator.

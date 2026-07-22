@@ -102,4 +102,6 @@ field). See the service's [/privacy](https://pingwa.dev/privacy).
 
 ## License
 
-MIT — see the `LICENSE` in the repository root. Covers this client package only.
+MIT — see `LICENSE` in the repository root. It covers this client package only
+(`src/pingwa/client/`); the pingwa server is separate, private, and not
+published. See `NOTICE` for the exact boundary.
