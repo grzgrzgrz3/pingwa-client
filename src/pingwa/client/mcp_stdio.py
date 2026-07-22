@@ -48,28 +48,51 @@ def register_tools(mcp: FastMCP, get_client) -> FastMCP:
                   "24h reply window is open; text-only otherwise."),
         ] = None,
     ) -> str:
-        """Send a WhatsApp notification to the account owner's own phone.
+        """Send a one-way WhatsApp notification to the account owner's own phone.
 
         `text` is the message (1-1024 chars). `image_url` (optional) is a public https
         image link — a screenshot, chart or diff — delivered as an image with `text` as
-        the caption when the user's 24h window is open (otherwise text only). Returns a
-        confirmation with the queued message id; raises an actionable error on quota/auth.
+        the caption when the user's 24h window is open (otherwise text only).
+
+        Behavior: queues one WhatsApp message and returns a confirmation with the queued
+        message id. Counts against the monthly quota. Does not block or return a reply.
+        Raises an actionable error (with a fix hint) on quota exhaustion or bad/missing key.
+
+        When to use: to tell the human something happened when you do NOT need an answer —
+        a build finished, a job failed, a long task is done, a deploy shipped. When you
+        need the human to answer or decide, use `ask` instead.
         """
         return tools.notify_tool(get_client(), text, image_url)
 
     @mcp.tool(name="check_status")
     def check_status() -> str:
         """Show the pingwa account's plan, remaining monthly quota, and whether the
-        free 24h WhatsApp reply window is currently open."""
+        free 24h WhatsApp reply window is currently open.
+
+        Behavior: read-only. Sends no WhatsApp message, changes nothing, and uses no
+        quota — safe to call at any time. Returns a short human-readable summary: plan
+        tier (Free/Pro), messages left this month, when the quota resets, and whether
+        the reply window is open.
+
+        When to use: before a batch of `notify`/`ask` calls to confirm quota remains;
+        after any tool raises a quota error, to see how much is left and when it resets;
+        or to decide whether to call `upgrade`. Takes no parameters. This is the only
+        tool that reports account state — it never sends anything.
+        """
         return tools.status_tool(get_client())
 
     @mcp.tool()
     def upgrade() -> str:
-        """Get a link to upgrade the account to Pro (raises the monthly quota).
+        """Get a link to raise the account's monthly quota by upgrading to Pro.
 
-        Returns a Stripe Checkout URL for the human to open and pay — no pingwa
-        password needed, the card is handled by Stripe. If the account is already
-        Pro, returns a billing-portal URL to manage or cancel instead.
+        Behavior: creates no charge itself and sends no WhatsApp message. Returns a
+        Stripe Checkout URL for the human to open and pay — no pingwa password needed,
+        the card is handled by Stripe. If the account is already Pro, returns a Stripe
+        billing-portal URL to manage or cancel the subscription instead.
+
+        When to use: when `notify`/`ask` fail with a quota-exhausted error, or when
+        `check_status` shows the monthly quota is low or spent. Hand the returned URL to
+        the human to open — you cannot complete the payment yourself. Takes no parameters.
         """
         return tools.upgrade_tool(get_client())
 
@@ -95,11 +118,19 @@ def register_tools(mcp: FastMCP, get_client) -> FastMCP:
         """Ask the human a question on WhatsApp and BLOCK until they reply (or timeout).
 
         `text` is the question. `buttons` (optional, up to 3) render as tappable reply
-        buttons; omit them to invite a free-text answer the human types on their phone —
-        use this to let the human steer you mid-task. `timeout` is seconds to wait
-        (max 90). Returns the human's reply (free text and/or the chosen option). On
-        timeout, returns a note — the question was delivered and the answer is still
-        retrievable via `check_replies`.
+        buttons; omit them to invite a free-text answer the human types on their phone.
+        `timeout` is seconds to wait (max 90).
+
+        Behavior: sends one WhatsApp message and waits synchronously for the human's
+        answer, up to `timeout` seconds. Counts against the monthly quota. Returns the
+        human's reply — free text and/or the chosen button. On timeout, returns a note:
+        the question was still delivered and the answer stays retrievable later via
+        `check_replies`.
+
+        When to use: whenever you need a human decision before continuing — approval to
+        proceed, a choice between options (use `buttons`), or free-text steering mid-task
+        ('use the other API', 'ship it'). For a one-way heads-up that needs no answer,
+        use `notify` instead; to fetch a late answer after a timeout, use `check_replies`.
         """
         return tools.ask_tool(get_client(), text, buttons, timeout)
 
@@ -116,10 +147,20 @@ def register_tools(mcp: FastMCP, get_client) -> FastMCP:
                   "returning (0 = return immediately with whatever is buffered)."),
         ] = 0,
     ) -> str:
-        """Pull inbound WhatsApp messages the human sent to pingwa (out-of-band
-        instructions, or late answers to an `ask`). `since` is a cursor from a previous
-        call (pass it back to get only newer messages); `wait` long-polls up to that many
-        seconds for something to arrive. Returns the messages and a new cursor.
+        """Pull inbound WhatsApp messages the human sent to pingwa — out-of-band
+        instructions, or a late answer to an `ask` that timed out.
+
+        `since` is a cursor from a previous call (pass it back to get only newer
+        messages). `wait` long-polls up to that many seconds for a message to arrive
+        (0 = return immediately with whatever is buffered).
+
+        Behavior: read-only. Sends no WhatsApp message and uses no quota. Returns any
+        inbound messages plus a new cursor.
+
+        When to use: to poll for messages the human sent on their own initiative
+        (steering you between tasks), or to collect the answer to an earlier `ask` that
+        returned on timeout. Store the returned cursor and pass it back as `since` so you
+        only see new messages. Unlike `ask`, this never sends a question — it only reads.
         """
         return tools.check_replies_tool(get_client(), since, wait)
 
